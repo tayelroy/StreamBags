@@ -1,0 +1,6 @@
+
+{
+  "name": "StreamBags Terminal",
+  "description": "A white-label trading terminal and OBS overlay system for streamers, powered by Bags.fm and Gemini AI.",
+  "requestFramePermissions": []
+}
