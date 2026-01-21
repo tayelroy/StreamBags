@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { PhantomProvider, useModal, darkTheme, usePhantom, AddressType } from "@phantom/react-sdk";
 import Layout from './components/Layout';
 import TradingTerminal from './components/TradingTerminal';
 import Dashboard from './components/Dashboard';
@@ -22,6 +23,12 @@ const App: React.FC = () => {
   const [aiChat, setAiChat] = useState<{role: 'user' | 'assistant', text: string}[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+
+const phantomConfig = {
+    appId: 'dbba700f-4e6f-42dc-a0e2-5b0476bd6ed6',
+    addressTypes: [AddressType.solana], 
+    providers: ['injected', 'phantom', 'google'] as const, 
+  };
 
   useEffect(() => {
     getAllStreamers().then(setAllStreamers);
@@ -189,11 +196,17 @@ const App: React.FC = () => {
     }
   };
 
-  return (
-    <Layout activeRoute={route} setRoute={setRoute} streamerSlug={myProfile?.slug}>
-      {renderContent()}
-    </Layout>
+  
+return (
+    <PhantomProvider config={phantomConfig}>
+      <Layout activeRoute={route} setRoute={setRoute} streamerSlug={myProfile?.slug}>
+        {renderContent()}
+      </Layout>
+    </PhantomProvider>
   );
+
 };
+
+
 
 export default App;
