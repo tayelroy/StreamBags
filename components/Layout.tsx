@@ -1,6 +1,5 @@
 import React from 'react';
 import { AppRoute } from '../types';
-// ✅ Import the same Phantom hooks used in Dashboard
 import { usePhantom, useModal, useAccounts } from '@phantom/react-sdk';
 
 interface LayoutProps {
@@ -11,14 +10,13 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeRoute, setRoute, streamerSlug }) => {
-  // --- PHANTOM INTEGRATION ---
   const { isConnected } = usePhantom();
-  const { open } = useModal(); // Opens the same modal as Dashboard
+  const { open } = useModal();
   const accounts = useAccounts();
 
-  // Safe helper to get address (same logic as Dashboard)
+  // Helper to safely get the Solana address
   const solanaAddress = accounts?.find(
-    (account) => (account.addressType as string) === 'solana'
+    (account) => (account.addressType as string).toLowerCase() === 'solana'
   )?.address;
 
   const isOverlay = activeRoute === AppRoute.OVERLAY;
@@ -29,6 +27,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRoute, setRoute, stream
     <div className="min-h-screen flex flex-col bg-[#050505]">
       <header className="border-b border-white/10 p-4 sticky top-0 bg-[#050505]/80 backdrop-blur-md z-50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
+          {/* LOGO */}
           <div 
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => setRoute(AppRoute.HOME)}
@@ -37,6 +36,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRoute, setRoute, stream
             <h1 className="text-xl font-bold tracking-tighter">STREAMBAGS</h1>
           </div>
           
+          {/* NAV */}
           <nav className="hidden md:flex items-center gap-6">
             <button 
               onClick={() => setRoute(AppRoute.HOME)}
@@ -61,19 +61,26 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRoute, setRoute, stream
             </button>
           </nav>
 
+          {/* CONNECT BUTTON */}
           <div className="flex gap-4">
-            {/* ✅ CONNECT BUTTON NOW USES PHANTOM MODAL */}
             <button 
               onClick={() => open()} 
-              className="bg-white text-black px-4 py-2 rounded-full font-semibold hover:bg-zinc-200 transition flex items-center gap-2"
+              className={`px-6 py-2 rounded-full font-black text-sm transition-all flex items-center gap-2 shadow-lg ${
+                isConnected && solanaAddress
+                  ? "bg-yellow-400 text-black hover:bg-yellow-300 shadow-yellow-400/10" // Connected Style
+                  : "bg-white text-black hover:bg-zinc-200" // Disconnected Style
+              }`}
             >
               {isConnected && solanaAddress ? (
                 <>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  {solanaAddress.slice(0, 4)}...{solanaAddress.slice(-4)}
+                  <div className="w-2 h-2 bg-black rounded-full animate-pulse"></div>
+                  <span className="font-mono">{solanaAddress.slice(0, 4)}...{solanaAddress.slice(-4)}</span>
                 </>
               ) : (
-                "Connect Wallet"
+                <>
+                  <i className="fa-solid fa-wallet"></i>
+                  <span>CONNECT WALLET</span>
+                </>
               )}
             </button>
           </div>
