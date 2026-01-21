@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { StreamerProfile, FeeData, AppRoute } from '../types';
 import { createPartnerKey, fetchFeeData } from '../services/bagsService';
+import { usePhantom, useModal, useAccounts, AddressType } from "@phantom/react-sdk";
 
 interface DashboardProps {
   onProfileCreated: (p: StreamerProfile) => void;
@@ -10,8 +11,16 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onProfileCreated, currentProfile, setRoute }) => {
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  // Phantom Hooks
+  const { isConnected } = usePhantom();
+  const { open } = useModal();
+  const accounts = useAccounts();
+
+const solanaAddress = accounts?.find(
+    (account) => (account.addressType as string) === 'solana'
+  )?.address;
+
+    // Local State 
   const [slug, setSlug] = useState('');
   const [name, setName] = useState('');
   const [fees, setFees] = useState<FeeData | null>(null);
@@ -19,28 +28,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onProfileCreated, currentProfile,
 
   useEffect(() => {
     if (currentProfile) {
-      setWalletConnected(true);
-      setWalletAddress(currentProfile.walletAddress);
       fetchFeeData(currentProfile.partnerKey).then(setFees);
     }
   }, [currentProfile]);
 
-  const connectWallet = () => {
-    setIsCreating(true);
-    setTimeout(() => {
-      const mockAddress = `7xK...${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-      setWalletAddress(mockAddress);
-      setWalletConnected(true);
-      setIsCreating(false);
-    }, 800);
+  const handleConnect = () => {
+    open();
   };
 
   const handleCreate = async () => {
-    if (!slug || !name || !walletAddress) return;
+    // We now use the REAL solanaAddress instead of a mock one
+    if (!slug || !name || !solanaAddress) return;
+    
     setIsCreating(true);
     try {
-      // Logic updated for Phase 2 "Database" mapping
-      const profile = await createPartnerKey(walletAddress, slug, name);
+      // Register the terminal with the real wallet
+      const profile = await createPartnerKey(solanaAddress, slug, name);
       onProfileCreated(profile);
     } catch (err) {
       alert("API Error: Could not register terminal.");
@@ -49,7 +52,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onProfileCreated, currentProfile,
     }
   };
 
-  if (!walletConnected) {
+  // 1. STATE: WALLET NOT CONNECTED
+  // We check specifically for solanaAddress to ensure we have the public key ready
+  if (!isConnected || !solanaAddress) {
     return (
       <div className="max-w-xl mx-auto py-24">
         <div className="bg-zinc-900 border border-white/10 p-12 rounded-[40px] text-center space-y-8 shadow-2xl relative overflow-hidden">
@@ -64,25 +69,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onProfileCreated, currentProfile,
             <p className="text-zinc-500 mt-2">Connect your Solana wallet to launch your white-label trading terminal.</p>
           </div>
           <button 
-            onClick={connectWallet}
-            disabled={isCreating}
+            onClick={handleConnect}
             className="w-full py-5 bg-white text-black font-black text-xl rounded-2xl hover:bg-zinc-200 transition-all active:scale-95 flex items-center justify-center gap-3"
           >
-            {isCreating ? <i className="fa-solid fa-circle-notch animate-spin"></i> : <i className="fa-solid fa-bolt"></i>}
-            CONNECT WALLET
+            <i className="fa-solid fa-bolt"></i> Connect Wallet
           </button>
         </div>
       </div>
     );
   }
 
+  // 2. STATE: CONNECTED BUT NO PROFILE (REGISTRATION)
   if (!currentProfile) {
     return (
       <div className="max-w-2xl mx-auto py-20">
         <div className="bg-zinc-900 border border-white/10 rounded-[48px] p-12 space-y-10 shadow-2xl">
           <div className="flex justify-between items-center">
              <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-none">Setup Terminal</h2>
-             <div className="text-[10px] font-black bg-zinc-800 px-3 py-1 rounded-full text-zinc-400">{walletAddress}</div>
+             <div className="text-[10px] font-black bg-zinc-800 px-3 py-1 rounded-full text-zinc-400 font-mono">
+                {solanaAddress.slice(0, 4)}...{solanaAddress.slice(-4)}
+             </div>
           </div>
 
           <div className="space-y-6">
@@ -106,14 +112,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onProfileCreated, currentProfile,
                   className="bg-transparent border-none outline-none w-full font-bold text-yellow-400 placeholder-zinc-800"
                 />
               </div>
-              <p className="text-[10px] text-zinc-600 font-bold italic pl-2">Warning: Slug is permanent once registered in the registry.</p>
+              <p className="text-[10px] text-zinc-600 font-bold italic pl-2">Warning: Slug is permanent once registered.</p>
             </div>
             <button 
               onClick={handleCreate}
               disabled={isCreating}
               className="w-full py-6 bg-yellow-400 text-black font-black text-2xl italic tracking-tighter rounded-2xl hover:bg-yellow-300 transition-all active:scale-95 uppercase"
             >
-              {isCreating ? 'REGISTERING TERMINAL...' : 'LAUNCH TERMINAL'}
+              {isCreating ? 'REGISTERING...' : 'LAUNCH TERMINAL'}
             </button>
           </div>
         </div>
@@ -121,13 +127,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onProfileCreated, currentProfile,
     );
   }
 
+  // 3. STATE: DASHBOARD (ALREADY REGISTERED)
   return (
     <div className="space-y-12 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <div className="px-2 py-0.5 bg-yellow-400 text-black text-[10px] font-black uppercase tracking-widest rounded italic">ACTIVE PARTNER</div>
-            <span className="text-zinc-600 text-[10px] font-black tracking-widest uppercase">KEY: {currentProfile.partnerKey.slice(-8)}</span>
+            <span className="text-zinc-600 text-[10px] font-black tracking-widest uppercase">KEY: {currentProfile.partnerKey.slice(0,8)}...</span>
           </div>
           <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none">{currentProfile.displayName}</h2>
           <div className="flex items-center gap-2 mt-3 text-zinc-500 font-bold">

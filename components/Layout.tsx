@@ -1,6 +1,7 @@
-
 import React from 'react';
 import { AppRoute } from '../types';
+// ✅ Import the same Phantom hooks used in Dashboard
+import { usePhantom, useModal, useAccounts } from '@phantom/react-sdk';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,16 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeRoute, setRoute, streamerSlug }) => {
+  // --- PHANTOM INTEGRATION ---
+  const { isConnected } = usePhantom();
+  const { open } = useModal(); // Opens the same modal as Dashboard
+  const accounts = useAccounts();
+
+  // Safe helper to get address (same logic as Dashboard)
+  const solanaAddress = accounts?.find(
+    (account) => (account.addressType as string) === 'solana'
+  )?.address;
+
   const isOverlay = activeRoute === AppRoute.OVERLAY;
 
   if (isOverlay) return <div className="h-screen w-screen overflow-hidden bg-transparent">{children}</div>;
@@ -51,8 +62,19 @@ const Layout: React.FC<LayoutProps> = ({ children, activeRoute, setRoute, stream
           </nav>
 
           <div className="flex gap-4">
-            <button className="bg-white text-black px-4 py-2 rounded-full font-semibold hover:bg-zinc-200 transition">
-              Connect Wallet
+            {/* ✅ CONNECT BUTTON NOW USES PHANTOM MODAL */}
+            <button 
+              onClick={() => open()} 
+              className="bg-white text-black px-4 py-2 rounded-full font-semibold hover:bg-zinc-200 transition flex items-center gap-2"
+            >
+              {isConnected && solanaAddress ? (
+                <>
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  {solanaAddress.slice(0, 4)}...{solanaAddress.slice(-4)}
+                </>
+              ) : (
+                "Connect Wallet"
+              )}
             </button>
           </div>
         </div>
