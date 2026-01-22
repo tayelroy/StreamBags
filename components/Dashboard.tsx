@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { StreamerProfile, FeeData, AppRoute } from '../types';
 import { createPartnerKey, fetchFeeData } from '../services/bagsService';
-import { usePhantom, useModal, useAccounts, AddressType } from "@phantom/react-sdk";
+// 1. Import Real Hooks
+import { usePhantom, useAccounts, useModal } from '@phantom/react-sdk';
 
 interface DashboardProps {
   onProfileCreated: (p: StreamerProfile) => void;
@@ -11,16 +11,16 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onProfileCreated, currentProfile, setRoute }) => {
-  // Phantom Hooks
+  // 2. Use Global Wallet State (Instead of local mock state)
   const { isConnected } = usePhantom();
-  const { open } = useModal();
   const accounts = useAccounts();
+  const { open } = useModal();
 
-const solanaAddress = accounts?.find(
-    (account) => (account.addressType as string) === 'solana'
+  // Find the real address
+  const solanaAddress = accounts?.find(
+    (account) => (account.addressType as string).toLowerCase() === 'solana'
   )?.address;
 
-    // Local State 
   const [slug, setSlug] = useState('');
   const [name, setName] = useState('');
   const [fees, setFees] = useState<FeeData | null>(null);
@@ -32,17 +32,16 @@ const solanaAddress = accounts?.find(
     }
   }, [currentProfile]);
 
+  // 3. Update Connect Function to open the real Modal
   const handleConnect = () => {
     open();
   };
 
   const handleCreate = async () => {
-    // We now use the REAL solanaAddress instead of a mock one
     if (!slug || !name || !solanaAddress) return;
-    
     setIsCreating(true);
     try {
-      // Register the terminal with the real wallet
+      // Use the REAL solanaAddress here
       const profile = await createPartnerKey(solanaAddress, slug, name);
       onProfileCreated(profile);
     } catch (err) {
@@ -52,8 +51,7 @@ const solanaAddress = accounts?.find(
     }
   };
 
-  // 1. STATE: WALLET NOT CONNECTED
-  // We check specifically for solanaAddress to ensure we have the public key ready
+  // 4. Update the "Not Connected" View
   if (!isConnected || !solanaAddress) {
     return (
       <div className="max-w-xl mx-auto py-24">
@@ -72,14 +70,14 @@ const solanaAddress = accounts?.find(
             onClick={handleConnect}
             className="w-full py-5 bg-white text-black font-black text-xl rounded-2xl hover:bg-zinc-200 transition-all active:scale-95 flex items-center justify-center gap-3"
           >
-            <i className="fa-solid fa-bolt"></i> Connect Wallet
+            <i className="fa-solid fa-bolt"></i> CONNECT WALLET
           </button>
         </div>
       </div>
     );
   }
 
-  // 2. STATE: CONNECTED BUT NO PROFILE (REGISTRATION)
+  // 5. Update the "Registration" View (Connected but no Profile)
   if (!currentProfile) {
     return (
       <div className="max-w-2xl mx-auto py-20">
@@ -127,14 +125,15 @@ const solanaAddress = accounts?.find(
     );
   }
 
-  // 3. STATE: DASHBOARD (ALREADY REGISTERED)
+  // 6. Connected View (Keep your existing Dashboard UI below this point)
   return (
     <div className="space-y-12 pb-20">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      {/* ... (Keep your existing stats grid code here) ... */}
+       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <div className="px-2 py-0.5 bg-yellow-400 text-black text-[10px] font-black uppercase tracking-widest rounded italic">ACTIVE PARTNER</div>
-            <span className="text-zinc-600 text-[10px] font-black tracking-widest uppercase">KEY: {currentProfile.partnerKey.slice(0,8)}...</span>
+            <span className="text-zinc-600 text-[10px] font-black tracking-widest uppercase">KEY: {currentProfile.partnerKey.slice(-8)}</span>
           </div>
           <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none">{currentProfile.displayName}</h2>
           <div className="flex items-center gap-2 mt-3 text-zinc-500 font-bold">
