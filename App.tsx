@@ -36,9 +36,10 @@ const AppContent: React.FC = () => {
   const [userInput, setUserInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
-  // Sync Supabase when wallet connects
+// --- EFFECT 1: LOGIN (Syncs when wallet connects) ---
   useEffect(() => {
     const syncProfile = async () => {
+      // Only run if we have an address but NO profile yet
       if (solanaAddress && !myProfile) {
         const existingProfile = await getStreamerByWallet(solanaAddress);
         if (existingProfile) {
@@ -50,6 +51,19 @@ const AppContent: React.FC = () => {
       }
     };
     syncProfile();
+  }, [solanaAddress, myProfile]); 
+
+
+  // --- EFFECT 2: LOGOUT (Clears data when wallet disconnects) ---
+  // THIS IS THE NEW BLOCK I SENT YOU
+  useEffect(() => {
+    // Only run if we HAD a profile, but the wallet is now gone
+    if (!solanaAddress && myProfile) {
+      console.log("Wallet disconnected. Clearing profile...");
+      setMyProfile(undefined);
+      localStorage.removeItem('sb_profile_v2');
+      setRoute(AppRoute.HOME);
+    }
   }, [solanaAddress, myProfile]);
 
   useEffect(() => {
