@@ -1,14 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom'; // 1. Import useParams
 import { Token, StreamerProfile } from '../types';
-import { fetchTokens, executeSwap } from '../services/bagsService';
+import { fetchTokens, executeSwap, getStreamerBySlug } from '../services/bagsService'; // 2. Import getStreamerBySlug
 import { analyzeToken } from '../services/geminiService';
 
 interface TradingTerminalProps {
   profile: StreamerProfile;
 }
 
-const TradingTerminal: React.FC<TradingTerminalProps> = ({ profile }) => {
+const TradingTerminal: React.FC<TradingTerminalProps> = ({ profile: initialProfile }) => {
+  const { slug } = useParams<{ slug: string }>(); // 3. Get slug from URL
+  const [profile, setProfile] = useState<StreamerProfile | undefined>(initialProfile);
   const [tokens, setTokens] = useState<Token[]>([]);
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [amount, setAmount] = useState<string>('');
@@ -17,9 +19,21 @@ const TradingTerminal: React.FC<TradingTerminalProps> = ({ profile }) => {
   const [isSwapping, setIsSwapping] = useState(false);
 
   useEffect(() => {
+    if (!profile && slug) {
+      getStreamerBySlug(slug).then((data) => {
+        if (data) setProfile(data);
+      });
+    }
+  }, [slug, profile]);
+
+  useEffect(() => {
     fetchTokens().then(setTokens);
   }, []);
 
+  if (!profile) {
+    return <div className="text-center py-20 text-zinc-500 font-black animate-pulse">LOADING TERMINAL DATA...</div>;
+  }
+  
   const handleAnalyze = async (token: Token) => {
     setIsLoadingAnalysis(true);
     setAiAnalysis(null);
