@@ -3,11 +3,16 @@ export interface Token {
   id: string;
   symbol: string;
   name: string;
+  image: string;
   price: number;
   change24h: number;
   marketCap: number;
   volume24h: number;
-  image: string;
+  fdv?: number;
+  organicScore?: number;
+  liquidity?: number;
+  holderCount?: number;
+  isVerified?: boolean;
 }
 
 export interface StreamerProfile {
